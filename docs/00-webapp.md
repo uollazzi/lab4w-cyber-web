@@ -1,3 +1,3 @@
 # Applicazione Web
 
-Spiega cos'è una web application e richieste HTTP in breve.
+Cos'è una web application e richieste/risposte HTTP in breve.
