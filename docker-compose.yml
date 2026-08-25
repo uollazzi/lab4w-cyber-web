@@ -13,16 +13,23 @@ services:
     environment:
       DATABASE_URL: postgresql://websec:websec@db:5432/websec
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
-    image: postgres:18
+    image: postgres:17
     environment:
       POSTGRES_USER: websec
       POSTGRES_PASSWORD: websec
       POSTGRES_DB: websec
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./app/src/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U websec -d websec"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
