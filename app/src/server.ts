@@ -36,6 +36,7 @@ app.get("/health", async (_req, res) => {
 
 app.get("/users", async (_req, res) => {
   try {
+    // FIX
     const result = await pool.query(`
       SELECT *
       FROM users
