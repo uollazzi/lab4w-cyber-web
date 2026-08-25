@@ -52,6 +52,31 @@ app.get("/users", async (_req, res) => {
   }
 });
 
+app.get("/users/search", async (req, res) => {
+  const username = req.query.username;
+
+  // VULNERABLE: user input is concatenated directly into the SQL query.
+  const query = `
+    SELECT id, username, email, role
+    FROM users
+    WHERE username = '${username}'
+  `;
+
+  console.log("Executing query:", query);
+
+  try {
+    const result = await pool.query(query);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Database error",
+    });
+  }
+});
+
 app.get("/products", async (_req, res) => {
   try {
     const result = await pool.query(`
