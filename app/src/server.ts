@@ -77,6 +77,24 @@ app.get("/users/search", async (req, res) => {
   }
 });
 
+app.get("/welcome", (req, res) => {
+  const name = req.query.name ?? "visitatore";
+
+  // VULNERABLE: user input is inserted directly into the HTML page.
+  res.send(`
+    <!doctype html>
+    <html lang="it">
+      <head>
+        <meta charset="utf-8">
+        <title>Benvenuto</title>
+      </head>
+      <body>
+        <h1>Benvenuto, ${name}!</h1>
+      </body>
+    </html>
+  `);
+});
+
 app.get("/products", async (_req, res) => {
   try {
     const result = await pool.query(`
