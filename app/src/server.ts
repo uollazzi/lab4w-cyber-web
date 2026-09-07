@@ -9,6 +9,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 function getSessionUserId(req: express.Request): number | undefined {
   const sessionCookie = req.headers.cookie
@@ -118,6 +119,22 @@ app.get("/tools/ping", (req, res) => {
   });
 });
 
+app.get("/login-page", (_req, res) => {
+  res.send(`
+    <!doctype html>
+    <html lang="it">
+      <head><meta charset="utf-8"><title>Login</title></head>
+      <body>
+        <form method="post" action="/login">
+          <label>Username <input name="username"></label>
+          <label>Password <input name="password" type="password"></label>
+          <button type="submit">Accedi</button>
+        </form>
+      </body>
+    </html>
+  `);
+});
+
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   const result = await pool.query(
@@ -204,6 +221,26 @@ app.get("/files", async (req, res) => {
   } catch {
     res.status(404).json({ error: "File not found" });
   }
+});
+
+app.get("/profile/email/change", async (req, res) => {
+  const userId = getSessionUserId(req);
+
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  // VULNERABLE: a state-changing request has no CSRF protection.
+  const result = await pool.query(
+    `UPDATE users
+     SET email = $1
+     WHERE id = $2
+     RETURNING id, username, email`,
+    [req.query.email, userId],
+  );
+
+  res.json(result.rows[0]);
 });
 
 app.get("/products", async (_req, res) => {
