@@ -154,6 +154,43 @@ app.get("/profile", async (req, res) => {
   res.json(result.rows[0]);
 });
 
+app.get("/accounts/:userId", async (req, res) => {
+  const currentUserId = getSessionUserId(req);
+
+  if (!currentUserId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  // VULNERABLE: authentication is checked, but ownership is not.
+  const result = await pool.query(
+    "SELECT id, username, email, role FROM users WHERE id = $1",
+    [req.params.userId],
+  );
+
+  res.json(result.rows[0]);
+});
+
+app.patch("/accounts/:userId/role", async (req, res) => {
+  const currentUserId = getSessionUserId(req);
+
+  if (!currentUserId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  // VULNERABLE: every authenticated user can assign every role.
+  const result = await pool.query(
+    `UPDATE users
+     SET role = $1
+     WHERE id = $2
+     RETURNING id, username, email, role`,
+    [req.body.role, req.params.userId],
+  );
+
+  res.json(result.rows[0]);
+});
+
 app.get("/products", async (_req, res) => {
   try {
     const result = await pool.query(`
