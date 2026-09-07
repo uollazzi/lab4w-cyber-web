@@ -1,4 +1,5 @@
 import express from "express";
+import { exec } from "node:child_process";
 import { pool, testDatabaseConnection } from "./db";
 
 const app = express();
@@ -93,6 +94,15 @@ app.get("/welcome", (req, res) => {
       </body>
     </html>
   `);
+});
+
+app.get("/tools/ping", (req, res) => {
+  const host = String(req.query.host ?? "127.0.0.1");
+
+  // VULNERABLE: the shell interprets both the command and the user input.
+  exec(`ping -c 1 ${host}`, { timeout: 5000 }, (error, stdout, stderr) => {
+    res.type("text/plain").send(stdout || stderr || error?.message);
+  });
 });
 
 app.get("/products", async (_req, res) => {
