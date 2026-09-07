@@ -1,5 +1,7 @@
 import express from "express";
 import { exec } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { pool, testDatabaseConnection } from "./db";
 
 const app = express();
@@ -189,6 +191,19 @@ app.patch("/accounts/:userId/role", async (req, res) => {
   );
 
   res.json(result.rows[0]);
+});
+
+app.get("/files", async (req, res) => {
+  const filename = String(req.query.name ?? "welcome.txt");
+  // VULNERABLE: ../ can leave the intended public directory.
+  const filePath = join(process.cwd(), "files", "public", filename);
+
+  try {
+    const content = await readFile(filePath, "utf8");
+    res.type("text/plain").send(content);
+  } catch {
+    res.status(404).json({ error: "File not found" });
+  }
 });
 
 app.get("/products", async (_req, res) => {
