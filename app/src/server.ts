@@ -8,6 +8,17 @@ const PORT = 3000;
 
 app.use(express.json());
 
+function getSessionUserId(req: express.Request): number | undefined {
+  const sessionCookie = req.headers.cookie
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("session="));
+  const token = sessionCookie?.slice("session=".length);
+  const match = /^session-(\d+)$/.exec(token ?? "");
+
+  return match ? Number(match[1]) : undefined;
+}
+
 app.get("/", (_req, res) => {
   res.json({
     message: "Web Security Course",
@@ -103,6 +114,44 @@ app.get("/tools/ping", (req, res) => {
   exec(`ping -c 1 ${host}`, { timeout: 5000 }, (error, stdout, stderr) => {
     res.type("text/plain").send(stdout || stderr || error?.message);
   });
+});
+
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+  const result = await pool.query(
+    `SELECT id, username, email, role
+     FROM users
+     WHERE username = $1 AND password = $2`,
+    [username, password],
+  );
+
+  if (result.rowCount === 0) {
+    res.status(401).json({ error: "Invalid credentials" });
+    return;
+  }
+
+  const user = result.rows[0];
+  // VULNERABLE: the token is predictable and readable by browser scripts.
+  const token = `session-${user.id}`;
+
+  res.cookie("session", token, { httpOnly: false });
+  res.json({ message: "Login successful", token });
+});
+
+app.get("/profile", async (req, res) => {
+  const userId = getSessionUserId(req);
+
+  if (!userId) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  const result = await pool.query(
+    "SELECT id, username, email, role FROM users WHERE id = $1",
+    [userId],
+  );
+
+  res.json(result.rows[0]);
 });
 
 app.get("/products", async (_req, res) => {
