@@ -8,11 +8,12 @@ Prima aprire `http://localhost:8080/login-page` ed effettuare il login come Alic
 `alice` / `password123`, così il browser riceve il cookie `session`. Poi aprire:
 
 ```text
-http://127.0.0.1:8081
+http://localhost:8081
 ```
 
-Questa pagina appartiene a un'origine diversa e simula il sito dell'aggressore. Dopo
-due secondi manda il browser verso:
+Questa pagina appartiene a un'origine diversa, perché usa una porta diversa, e simula
+un servizio dello stesso sito controllato dall'aggressore. Dopo due secondi manda il
+browser verso:
 
 ```text
 http://localhost:8080/profile/email/change?email=attacker@evil.test
@@ -30,7 +31,12 @@ Due errori rendono possibile l'attacco:
 
 Il servizio `attacker` in [docker-compose.yml](../docker-compose.yml) serve soltanto a
 mostrare le due origini: applicazione su `localhost:8080`, pagina ostile su
-`127.0.0.1:8081`.
+`localhost:8081`.
+
+Il cookie usa già `SameSite=Strict`, come previsto dalla correzione della lezione 05.
+Il browser lo invia comunque in questo esempio perché le due origini, pur avendo porte
+diverse, appartengono allo stesso sito `localhost`. Per questo `SameSite` riduce molti
+attacchi CSRF, ma non sostituisce il controllo eseguito dal server.
 
 ## FIX
 
