@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Web Security Lab",
+      "Group": "Servers",
+      "Host": "db",
+      "Port": 5432,
+      "MaintenanceDB": "websec",
+      "Username": "websec",
+      "SSLMode": "prefer"
+    }
+  }
+}
