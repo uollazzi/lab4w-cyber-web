@@ -42,13 +42,17 @@ attacchi CSRF, ma non sostituisce il controllo eseguito dal server.
 
 [server.ts](../app/src/server.ts)
 
-Importare `randomBytes` da `node:crypto`, se non è già stato fatto nella correzione
-della lezione sulle sessioni, e aggiungere:
+`randomBytes` è già importato dalla correzione della lezione sulle sessioni. Prima
+degli endpoint, aggiungere un archivio temporaneo dei token:
 
 ```ts
 const csrfTokens = new Map<number, string>();
+```
 
-app.get("/csrf-token", (req, res) => {
+Poi aggiungere la pagina legittima per la modifica dell'email:
+
+```ts
+app.get("/profile/email", (req, res) => {
   const userId = getSessionUserId(req);
 
   if (!userId) {
@@ -56,13 +60,29 @@ app.get("/csrf-token", (req, res) => {
     return;
   }
 
-  const token = randomBytes(32).toString("hex");
-  csrfTokens.set(userId, token);
-  res.json({ csrfToken: token });
+  const csrfToken = randomBytes(32).toString("hex");
+  csrfTokens.set(userId, csrfToken);
+
+  res.send(`
+    <!doctype html>
+    <html lang="it">
+      <head><meta charset="utf-8"><title>Modifica email</title></head>
+      <body>
+        <form method="post" action="/profile/email">
+          <label>Nuova email <input name="email" type="email"></label>
+          <input name="csrfToken" type="hidden" value="${csrfToken}">
+          <button type="submit">Salva</button>
+        </form>
+      </body>
+    </html>
+  `);
 });
 ```
 
-Poi eliminare `GET /profile/email/change` e sostituirlo con:
+Il campo `hidden` non viene mostrato nella pagina, ma il browser lo invia insieme
+all'email quando Alice preme **Salva**.
+
+Infine eliminare `GET /profile/email/change` e sostituirlo con:
 
 ```ts
 app.post("/profile/email", async (req, res) => {
@@ -95,13 +115,17 @@ app.post("/profile/email", async (req, res) => {
 });
 ```
 
-Il modulo `express.urlencoded` è già attivato nel codice e permette di ricevere un
-formulario HTML. Il formulario legittimo deve ottenere `/csrf-token` e inviare il
-valore ricevuto insieme alla nuova email.
+Il modulo `express.urlencoded` è già attivato nel codice e permette di ricevere i
+campi del formulario HTML, compreso `csrfToken`.
 
-Il sito ostile può ancora inviare una richiesta, ma non può leggere il token restituito
-dall'applicazione a causa della separazione tra origini del browser. Il server risponde
-quindi `403`.
+La pagina ostile può costruire un formulario identico, ma non può leggere l'HTML della
+pagina legittima a causa della separazione tra origini del browser. Non conosce quindi
+il valore casuale da inserire nel campo nascosto e il server risponde `403`.
+
+`hidden` non significa segreto per Alice: il valore è visibile negli strumenti del
+browser. Significa soltanto che un'altra origine non può leggerlo. Il token deve essere
+casuale, associato alla sessione e verificato dal server; un semplice campo nascosto
+con un valore fisso non offrirebbe alcuna protezione.
 
 Usare `POST` evita modifiche tramite collegamenti, immagini e sistemi di cache, ma da
 solo non basta: un altro sito può creare un formulario `POST`. Il token è il controllo
