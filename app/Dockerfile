@@ -9,6 +9,7 @@ RUN npm install
 COPY tsconfig.json ./
 COPY src ./src
 COPY files ./files
+COPY user-files ./user-files
 
 RUN npm run build
 

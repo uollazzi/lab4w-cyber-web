@@ -12,6 +12,9 @@ const PORT = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// VULNERABLE: every file is public when its path is known.
+app.use("/user-files", express.static(join(process.cwd(), "user-files")));
+
 const sessions = new Map<string, number>();
 
 function getSessionUserId(req: express.Request): number | undefined {
