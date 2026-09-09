@@ -8,7 +8,7 @@ Prima aprire `http://localhost:8080/login-page` ed effettuare il login come Alic
 `alice` / `password123`, così il browser riceve il cookie `session`. Poi aprire:
 
 ```text
-http://localhost:8081
+http://localhost:8081/vulnerable.html
 ```
 
 Questa pagina appartiene a un'origine diversa, perché usa una porta diversa, e simula
@@ -131,3 +131,25 @@ Usare `POST` evita modifiche tramite collegamenti, immagini e sistemi di cache, 
 solo non basta: un altro sito può creare un modulo `POST`. Il token è il controllo
 principale. Un cookie di sessione con `SameSite=Strict` e il controllo degli header
 `Origin` sono difese aggiuntive, non sostituti universali del token.
+
+## VERIFICA DEL FIX
+
+Dopo aver applicato la correzione, effettuare nuovamente il login come Alice e aprire:
+
+```text
+http://localhost:8081
+```
+
+La pagina ostile invia davvero un `POST /profile/email` con `email` e un campo nascosto
+contenente `csrfToken=token-falso`. Il cookie di Alice viene inviato, quindi la
+richiesta supera l'autenticazione; il server confronta però il token falso con quello
+casuale associato alla sessione e risponde:
+
+```text
+403 Forbidden
+{"error":"Invalid CSRF token"}
+```
+
+Un `404 Cannot GET /profile/email/change` non dimostra la protezione CSRF: indica
+soltanto che il vecchio endpoint non esiste più. La prova corretta deve raggiungere il
+nuovo endpoint `POST` e venire rifiutata precisamente dal controllo del token.
