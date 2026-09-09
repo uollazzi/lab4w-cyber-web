@@ -230,7 +230,7 @@ app.get("/files", async (req, res) => {
   }
 });
 
-app.get("/profile/email/change", async (req, res) => {
+app.post("/profile/email/change", async (req, res) => {
   const userId = getSessionUserId(req);
 
   if (!userId) {
@@ -238,13 +238,13 @@ app.get("/profile/email/change", async (req, res) => {
     return;
   }
 
-  // VULNERABLE: a state-changing request has no CSRF protection.
+  // VULNERABLE: the request changes data without verifying a CSRF token.
   const result = await pool.query(
     `UPDATE users
      SET email = $1
      WHERE id = $2
      RETURNING id, username, email`,
-    [req.query.email, userId],
+    [req.body.email, userId],
   );
 
   res.json(result.rows[0]);
