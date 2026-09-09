@@ -1,5 +1,6 @@
 import express from "express";
 import { exec } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pool, testDatabaseConnection } from "./db";
@@ -11,15 +12,16 @@ const PORT = 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+const sessions = new Map<string, number>();
+
 function getSessionUserId(req: express.Request): number | undefined {
   const sessionCookie = req.headers.cookie
     ?.split(";")
     .map((part) => part.trim())
     .find((part) => part.startsWith("session="));
   const token = sessionCookie?.slice("session=".length);
-  const match = /^session-(\d+)$/.exec(token ?? "");
 
-  return match ? Number(match[1]) : undefined;
+  return token ? sessions.get(token) : undefined;
 }
 
 app.get("/", (_req, res) => {
@@ -150,11 +152,16 @@ app.post("/login", async (req, res) => {
   }
 
   const user = result.rows[0];
-  // VULNERABLE: the token is predictable and readable by browser scripts.
-  const token = `session-${user.id}`;
+  const token = randomBytes(32).toString("hex");
+  sessions.set(token, user.id);
 
-  res.cookie("session", token, { httpOnly: false });
-  res.json({ message: "Login successful", token });
+  res.cookie("session", token, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 30 * 60 * 1000,
+  });
+  res.json({ message: "Login successful" });
 });
 
 app.get("/profile", async (req, res) => {

@@ -6,12 +6,23 @@ proprio quell'azione su proprio quell'oggetto.
 
 ## IDOR
 
-Alice è identificata dal cookie `session-1`. La richiesta seguente chiede però
-l'account numero `2`, che appartiene a Bob:
+La vulnerabilità della sessione vista nella lezione precedente è già corretta in
+questo branch: il token è casuale, salvato sul server e protetto con `HttpOnly`.
+
+Prima effettuare il login come Alice e salvare il cookie ricevuto:
+
+```sh
+curl -c alice-cookies.txt -X POST http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice","password":"password123"}'
+```
+
+La richiesta seguente usa quella sessione valida, ma chiede l'account numero `2`, che
+appartiene a Bob:
 
 ```sh
 curl http://localhost:8080/accounts/2 \
-  -H "Cookie: session=session-1"
+  -b alice-cookies.txt
 ```
 
 Il server controlla soltanto che esista una sessione e restituisce:
@@ -29,7 +40,7 @@ Alice può anche assegnarsi il ruolo amministratore:
 
 ```sh
 curl -X PATCH http://localhost:8080/accounts/1/role \
-  -H "Cookie: session=session-1" \
+  -b alice-cookies.txt \
   -H "Content-Type: application/json" \
   -d '{"role":"admin"}'
 ```
@@ -68,7 +79,7 @@ app.get("/accounts/:userId", async (req, res) => {
 });
 ```
 
-Con il cookie di Alice e l'indirizzo `/accounts/2`, i due numeri non coincidono e il
+Con la sessione di Alice e l'indirizzo `/accounts/2`, i due numeri non coincidono e il
 server risponde `403 Forbidden`. Il controllo deve essere sul server: nascondere un
 pulsante nell'interfaccia non impedisce di costruire la richiesta a mano.
 
