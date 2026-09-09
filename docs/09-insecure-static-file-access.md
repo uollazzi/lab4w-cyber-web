@@ -42,50 +42,73 @@ Rimuovere la pubblicazione statica:
 app.use("/user-files", express.static(join(process.cwd(), "user-files")));
 ```
 
-Al suo posto, aggiungere un endpoint che ricava il proprietario dalla sessione e non
-dall'indirizzo scelto dall'utente:
+Al suo posto, creare una lista che associa ogni utente ai file che può scaricare:
 
 ```ts
-const downloadableFiles = new Set(["report.txt"]);
+interface DownloadableFile {
+  name: string;
+  path: string;
+}
 
-app.get("/user-files/:filename", async (req, res) => {
+const filesByUserId = new Map<number, DownloadableFile[]>([
+  [
+    1,
+    [
+      {
+        name: "report.txt",
+        path: join(process.cwd(), "user-files", "alice", "report.txt"),
+      },
+    ],
+  ],
+  [
+    2,
+    [
+      {
+        name: "report.txt",
+        path: join(process.cwd(), "user-files", "bob", "report.txt"),
+      },
+    ],
+  ],
+]);
+```
+
+Poi aggiungere l'endpoint protetto:
+
+```ts
+app.get("/user-files/:filename", (req, res) => {
   const userId = getSessionUserId(req);
-  const filename = req.params.filename;
 
   if (!userId) {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
 
-  if (!downloadableFiles.has(filename)) {
+  const userFiles = filesByUserId.get(userId) ?? [];
+  const requestedFile = userFiles.find(
+    (file) => file.name === req.params.filename,
+  );
+
+  if (!requestedFile) {
     res.status(404).json({ error: "File not found" });
     return;
   }
 
-  const userResult = await pool.query(
-    "SELECT username FROM users WHERE id = $1",
-    [userId],
-  );
-  const username = userResult.rows[0]?.username;
-
-  if (!username) {
-    res.status(404).json({ error: "User not found" });
-    return;
-  }
-
-  const filePath = join(process.cwd(), "user-files", username, filename);
-  res.download(filePath);
+  res.download(requestedFile.path);
 });
 ```
 
-Con la sessione di Bob, l'unico `report.txt` ottenibile viene cercato nella cartella
-`bob`, perché il nome `bob` arriva dal database. Bob non può inserire `alice` nella
-richiesta.
+Il server recupera prima l'ID dalla sessione. Se Bob è autenticato, `userId` vale `2`
+e la ricerca viene eseguita soltanto nella lista associata al numero `2`. Il file di
+Alice è nella lista del numero `1`, quindi Bob non può ottenerlo.
 
-La lista `downloadableFiles` impedisce anche di trasformare il parametro in un path
-traversal. In un'applicazione reale è meglio registrare i documenti nel database con
-un identificativo casuale, il percorso interno e `owner_id`, poi controllare
-`owner_id` prima di inviare il file.
+Il percorso non viene costruito usando il testo della richiesta: arriva dalla lista
+decisa dal server. Questo impedisce anche di trasformare `filename` in un path
+traversal.
+
+La `Map` rende visibile il controllo durante il laboratorio. In un'applicazione reale
+la stessa associazione starebbe normalmente nel database: ogni documento avrebbe un
+identificativo, un percorso interno e `owner_id`. La query dovrebbe cercare insieme
+l'identificativo richiesto e l'ID dell'utente autenticato.
 
 [Dockerfile](../app/Dockerfile)
 
