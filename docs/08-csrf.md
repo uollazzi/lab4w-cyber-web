@@ -116,9 +116,9 @@ app.post("/profile/email", async (req, res) => {
 ```
 
 Il modulo `express.urlencoded` è già attivato nel codice e permette di ricevere i
-campi del formulario HTML, compreso `csrfToken`.
+campi del modulo HTML, compreso `csrfToken`.
 
-La pagina ostile può costruire un formulario identico, ma non può leggere l'HTML della
+La pagina ostile può costruire un modulo identico, ma non può leggere l'HTML della
 pagina legittima a causa della separazione tra origini del browser. Non conosce quindi
 il valore casuale da inserire nel campo nascosto e il server risponde `403`.
 
@@ -128,6 +128,6 @@ casuale, associato alla sessione e verificato dal server; un semplice campo nasc
 con un valore fisso non offrirebbe alcuna protezione.
 
 Usare `POST` evita modifiche tramite collegamenti, immagini e sistemi di cache, ma da
-solo non basta: un altro sito può creare un formulario `POST`. Il token è il controllo
+solo non basta: un altro sito può creare un modulo `POST`. Il token è il controllo
 principale. Un cookie di sessione con `SameSite=Strict` e il controllo degli header
 `Origin` sono difese aggiuntive, non sostituti universali del token.
