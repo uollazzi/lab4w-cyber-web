@@ -44,13 +44,10 @@ attacchi CSRF, ma non sostituisce il controllo eseguito dal server.
 `randomBytes` è già importato dalla correzione della lezione sulle sessioni. Prima
 degli endpoint, aggiungere un archivio temporaneo dei token:
 
-```ts
-const csrfTokens = new Map<number, string>();
-```
-
 Poi aggiungere la pagina legittima per la modifica dell'email:
 
 ```ts
+const csrfTokens = new Map<number, string>();
 app.get("/profile/email/change", (req, res) => {
   const userId = getSessionUserId(req);
 
